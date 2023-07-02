@@ -1,10 +1,25 @@
-import { Module } from '@nestjs/common';
+import { Module, NestModule, MiddlewareConsumer } from '@nestjs/common';
 import { AppController } from './app.controller';
-import { AppService } from './app.service';
+import { RedisModule } from './redis/redis.module';
+import { RateLimitMiddlewareMixin } from './middlewares/rate_limit.middleware';
 
 @Module({
-  imports: [],
+  imports: [
+    RedisModule.register({
+      url: 'redis://default:chah8Om7Uqua@localhost:6379',
+    }),
+  ],
   controllers: [AppController],
-  providers: [AppService],
 })
-export class AppModule {}
+export class AppModule implements NestModule {
+  configure(consumer: MiddlewareConsumer) {
+    consumer
+      .apply(
+        RateLimitMiddlewareMixin({
+          bucketSize: 4,
+          refillRate: 60,
+        }),
+      )
+      .forRoutes(AppController);
+  }
+}
